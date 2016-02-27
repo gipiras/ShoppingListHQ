@@ -4,10 +4,13 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.SparseBooleanArray;
+import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AbsListView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
@@ -32,6 +35,7 @@ public class MainActivity extends AppCompatActivity {
         dataSource = new ShoppingMemoDataSource(this);
 
         activateAddButton();
+        initializeContextualActionBar();
     }
 
     private void activateAddButton() {
@@ -71,6 +75,60 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+    }
+
+    private void initializeContextualActionBar() {
+
+        final ListView shoppingMemosListView = (ListView) findViewById(R.id.listview_shopping_memos);
+        shoppingMemosListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
+
+        shoppingMemosListView.setMultiChoiceModeListener(new AbsListView.MultiChoiceModeListener() {
+
+            @Override
+            public void onItemCheckedStateChanged(ActionMode mode, int position, long id, boolean checked) {
+
+            }
+
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                getMenuInflater().inflate(R.menu.menu_contextual_action_bar, menu);
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+                switch (item.getItemId()) {
+
+                    case R.id.cab_delete:
+                        SparseBooleanArray touchedShoppingMemosPositions = shoppingMemosListView.getCheckedItemPositions();
+                        for (int i = 0; i < touchedShoppingMemosPositions.size(); i++) {
+                            boolean isChecked = touchedShoppingMemosPositions.valueAt(i);
+                            if (isChecked) {
+                                int postitionInListView = touchedShoppingMemosPositions.keyAt(i);
+                                ShoppingMemo shoppingMemo = (ShoppingMemo) shoppingMemosListView.getItemAtPosition(postitionInListView);
+                                Log.d(LOG_TAG, "Position im ListView: " + postitionInListView + " Inhalt: " + shoppingMemo.toString());
+                                dataSource.deleteShoppingMemo(shoppingMemo);
+                            }
+                        }
+                        showAllListEntries();
+                        mode.finish();
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+
+            }
+        });
     }
 
     private void showAllListEntries() {
