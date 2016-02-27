@@ -2,9 +2,18 @@ package com.shoppinglist.gian_lucapiras.shoppinglisthq;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ListView;
+
+import java.util.List;
 
 /**
  * Created by gian-lucapiras on 25.02.16.
@@ -18,10 +27,62 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        ShoppingMemo testMemo = new ShoppingMemo("Birnen", 5, 102);
-        Log.d(LOG_TAG, "Inhalt der Testmemo: " + testMemo.toString());
 
+        Log.d(LOG_TAG, "Das Datenquellen-Objekt wird angelegt.");
         dataSource = new ShoppingMemoDataSource(this);
+
+        activateAddButton();
+    }
+
+    private void activateAddButton() {
+        Button buttonAddProduct = (Button) findViewById(R.id.button_add_product);
+        final EditText editTextQuantity = (EditText) findViewById(R.id.editText_quantity);
+        final EditText editTextProduct = (EditText) findViewById(R.id.editText_product);
+
+        buttonAddProduct.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                String quantityString = editTextQuantity.getText().toString();
+                String product = editTextProduct.getText().toString();
+
+                if (TextUtils.isEmpty(quantityString)) {
+                    editTextQuantity.setError(getString(R.string.editText_errorMessage));
+                    return;
+                }
+                if (TextUtils.isEmpty(product)) {
+                    editTextProduct.setError(getString(R.string.editText_errorMessage));
+                    return;
+                }
+
+                int quantity = Integer.parseInt(quantityString);
+                editTextQuantity.setText("");
+                editTextProduct.setText("");
+
+                dataSource.createShoppingMemo(product, quantity);
+
+                InputMethodManager inputMethodManager;
+                inputMethodManager = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                if (getCurrentFocus() != null) {
+                    inputMethodManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+                }
+
+                showAllListEntries();
+            }
+        });
+
+    }
+
+    private void showAllListEntries() {
+        List<ShoppingMemo> shoppingMemoList = dataSource.getAllShoppingMemos();
+
+        ArrayAdapter<ShoppingMemo> shoppingMemoArrayAdapter = new ArrayAdapter<>(
+                this,
+                android.R.layout.simple_list_item_multiple_choice,
+                shoppingMemoList);
+
+        ListView shoppingMemosListView = (ListView) findViewById(R.id.listview_shopping_memos);
+        shoppingMemosListView.setAdapter(shoppingMemoArrayAdapter);
     }
 
     @Override
@@ -44,5 +105,24 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        Log.d(LOG_TAG, "Die Datenquelle wird geöffnet.");
+        dataSource.open();
+
+        Log.d(LOG_TAG, "Folgende Einträge sind in der Datenbank vorhanden:");
+        showAllListEntries();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        Log.d(LOG_TAG, "Die Datenquelle wird geschlossen.");
+        dataSource.close();
     }
 }
